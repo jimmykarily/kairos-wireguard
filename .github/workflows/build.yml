@@ -1,0 +1,43 @@
+name: Build Kairos WireGuard Image
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    uses: kairos-io/kairos-factory-action/.github/workflows/reusable-factory.yaml@main
+    secrets:
+      registry_username: ${{ secrets.QUAY_USERNAME }}
+      registry_password: ${{ secrets.QUAY_PASSWORD }}
+    with:
+      dockerfile_path: Dockerfile
+      base_image: ubuntu:24.04
+      model: generic
+      arch: amd64
+      kubernetes_distro: k3s
+      kubernetes_version: auto
+      version: auto
+      trusted_boot: false
+      no_cache: false
+      iso: false
+      raw: false
+      vhd: false
+      gce: false
+      tar: false
+      compute_checksums: true
+      output_format: auto
+      security_checks: ""
+      cosign: false
+      grype: false
+      trivy: false
+      grype_sarif: false
+      trivy_sarif: false
+      registry_domain: quay.io
+      registry_namespace: jimmykarily
+      registry_repository: kairos-wireguard
+      summary_artifacts: false
+      auroraboot_version: latest
+      release: false
+      list_release_artifacts: false
