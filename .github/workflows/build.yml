@@ -7,6 +7,11 @@ on:
 
 jobs:
   build:
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+      security-events: write
     uses: kairos-io/kairos-factory-action/.github/workflows/reusable-factory.yaml@main
     secrets:
       registry_username: ${{ secrets.QUAY_USERNAME }}
