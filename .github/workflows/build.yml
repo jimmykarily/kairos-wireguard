@@ -6,7 +6,28 @@ on:
       - '*'
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      base_image_tag: ${{ steps.extract.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract tag from Dockerfile
+        id: extract
+        run: |
+          # Extract the KAIROS_BASE_IMAGE line from Dockerfile
+          BASE_IMAGE_LINE=$(grep "^ARG KAIROS_BASE_IMAGE=" Dockerfile | head -1)
+          FULL_IMAGE=$(echo "$BASE_IMAGE_LINE" | sed 's/.*=//' | tr -d '"')
+          TAG=$(echo "$FULL_IMAGE" | cut -d':' -f2)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Base image line: $BASE_IMAGE_LINE"
+          echo "Full image: $FULL_IMAGE"
+          echo "Extracted tag: $TAG"
+
   build:
+    needs: prepare
     permissions:
       id-token: write
       contents: write
@@ -42,6 +63,7 @@ jobs:
       registry_domain: quay.io
       registry_namespace: jimmykarily
       registry_repository: kairos-wireguard
+      custom_tag_format: ${{ needs.prepare.outputs.base_image_tag }}
       summary_artifacts: false
       auroraboot_version: latest
       release: false
