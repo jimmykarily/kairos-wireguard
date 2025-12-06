@@ -1,0 +1,73 @@
+# To generate WireGuard keys:
+#  sudo wg genkey | tee vm_private.key | wg pubkey > vm_public.key
+
+k3s:
+  enabled: true
+  # Optional: Configure k3s arguments
+  # args:
+  #   - "--disable=traefik"
+  #   - "--write-kubeconfig-mode=644"
+  #   - "--node-ip=10.0.0.2"  # Use WireGuard IP if needed
+
+# Cloud-init stages configuration
+stages:
+  # Initramfs stage - runs early in boot process
+  initramfs:
+    - name: "Prepare WireGuard configuration directory"
+      commands:
+        - mkdir -p /etc/wireguard
+
+write_files:
+    - content: |
+        [Interface]
+        PrivateKey = <CLUSTER_PRIVATE_KEY_HERE>
+        Address = 10.10.0.2/24
+        # MTU = 1420
+
+        # Optional: Configure DNS servers to use through VPN
+        # DNS = 1.1.1.1, 8.8.8.8
+
+        [Peer]
+        # Replace with the WireGuard server's public key
+        PublicKey = <SERVER_PUBLIC_KEY_HERE>
+
+        # Replace with the WireGuard server's endpoint (IP or hostname:Port)
+        # Example: "vpn.example.com:51820" or "203.0.113.1:51820"
+        Endpoint = <SERVER_ENDPOINT_HERE>:51820
+
+        # Configure allowed IPs
+        # Use 0.0.0.0/0 for full tunnel (all traffic through VPN)
+        # Use specific subnets for split tunneling (e.g., "10.0.0.0/8, 192.168.1.0/24")
+        AllowedIPs = 0.0.0.0/0
+
+        # Optional: Persistent keepalive (useful for NAT traversal)
+        # Sends a packet every 25 seconds to keep connection alive
+        PersistentKeepalive = 25
+      owner: root:root
+      path: /etc/wireguard/wg0.conf
+      permissions: "0600"
+
+runcmd:
+    - |
+      # Enable and start WireGuard interface once after config file is written
+      if [ -f /etc/wireguard/wg0.conf ]; then
+        echo "Configuring WireGuard..."
+        # Enable the service so it starts automatically on future boots
+        systemctl enable wg-quick@wg0.service
+        # Start the service now
+        systemctl start wg-quick@wg0.service
+        sleep 2
+        wg show || echo "WireGuard interface check completed"
+      else
+        echo "Warning: WireGuard configuration file not found at /etc/wireguard/wg0.conf"
+      fi
+
+# Optional: System configuration
+# Uncomment and customize as needed
+# system:
+#   hostname: "kairos-node"
+#   users:
+#     - name: "kairos"
+#       passwd: "kairos"
+#       ssh_authorized_keys:
+#         - "ssh-rsa YOUR_SSH_PUBLIC_KEY_HERE"
